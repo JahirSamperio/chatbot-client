@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  TextField, Button, Box, Typography, CircularProgress, Paper, 
-  ThemeProvider, createTheme, CssBaseline, IconButton
+import {
+  TextField, Button, Box, Typography, CircularProgress, Paper,
+  ThemeProvider, createTheme, CssBaseline, IconButton,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Send, CloudUpload } from '@mui/icons-material';
 import { sendMessageToChatbot, uploadFile } from './api/actions/chatActions.js';
@@ -40,7 +42,9 @@ const Chatbot = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
+  const [fileUpload, setFileUpload] = useState(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const chatEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -63,7 +67,7 @@ const Chatbot = () => {
 
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await sendMessageToChatbot(message);
       setChatHistory((prevHistory) => [
@@ -73,11 +77,16 @@ const Chatbot = () => {
       ]);
       setMessage('');
     } catch (error) {
-      setError('Error al enviar el mensaje');
+      setError(error.response.data.reply || 'Error al enviar el mensaje');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleCloseSnackbar = () => {
+    setError('')
+    setSuccess('')
+  }
 
   const handleFileUpload = async (e) => {
     e.preventDefault();
@@ -90,6 +99,8 @@ const Chatbot = () => {
       const response = await uploadFile(file);
       setError('');
       console.log(response);
+      setSuccess(response.message)
+      setFileUpload(true)
       setChatHistory(prevHistory => [...prevHistory, { sender: 'bot', message: 'Archivo subido con éxito' }]);
     } catch (error) {
       setError('Error al cargar el archivo');
@@ -102,29 +113,29 @@ const Chatbot = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ 
-        width: '100%', 
-        height: '100vh', 
-        display: 'flex', 
+      <Box sx={{
+        width: '100%',
+        height: '100vh',
+        display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.default',
         p: 2
       }}>
-        <Paper elevation={2} sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
+        <Paper elevation={2} sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
           overflow: 'hidden',
           borderRadius: 3
         }}>
           {/* Header */}
-          <Box sx={{ 
-            p: 2, 
+          <Box sx={{
+            p: 2,
             borderBottom: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper'
           }}>
-            <Typography variant="h5" sx={{ 
+            <Typography variant="h5" sx={{
               fontWeight: 600,
               background: 'linear-gradient(45deg, #2196f3 30%, #21CBF3 90%)',
               backgroundClip: 'text',
@@ -132,45 +143,50 @@ const Chatbot = () => {
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent'
             }}>
-              Chatbot 
+              Chatbot - JSA
             </Typography>
           </Box>
 
           {/* Chat Messages */}
-          <Box sx={{ 
-            flex: 1, 
-            overflowY: 'auto', 
+          <Box sx={{
+            flex: 1,
+            overflowY: 'auto',
             p: 2,
             display: 'flex',
             flexDirection: 'column',
             gap: 1.5,
             bgcolor: 'background.default'
           }}>
-            {chatHistory.map((entry, index) => (
-              <Box key={index} sx={{ 
-                display: 'flex',
-                justifyContent: entry.sender === 'user' ? 'flex-end' : 'flex-start',
-              }}>
-                <Paper elevation={1} sx={{ 
-                  p: 1.5,
-                  maxWidth: '70%',
-                  borderRadius: entry.sender === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                  bgcolor: entry.sender === 'user' ? 'primary.main' : 'background.paper',
-                  color: entry.sender === 'user' ? 'white' : 'text.primary',
-                  boxShadow: theme.shadows[1]
+            {chatHistory && !fileUpload ? 
+            <Typography variant="body1">
+              Carga un PDF para iniciar la conversación
+            </Typography>
+              :
+              chatHistory.map((entry, index) => (
+                <Box key={index} sx={{
+                  display: 'flex',
+                  justifyContent: entry.sender === 'user' ? 'flex-end' : 'flex-start',
                 }}>
-                  <Typography variant="body1">
-                    {entry.message}
-                  </Typography>
-                </Paper>
-              </Box>
-            ))}
+                  <Paper elevation={1} sx={{
+                    p: 1.5,
+                    maxWidth: '70%',
+                    borderRadius: entry.sender === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                    bgcolor: entry.sender === 'user' ? 'primary.main' : 'background.paper',
+                    color: entry.sender === 'user' ? 'white' : 'text.primary',
+                    boxShadow: theme.shadows[1]
+                  }}>
+                    <Typography variant="body1">
+                      {entry.message}
+                    </Typography>
+                  </Paper>
+                </Box>
+              ))}
             <div ref={chatEndRef} />
           </Box>
 
           {/* Input Area */}
-          <Box sx={{ 
-            p: 2, 
+          <Box sx={{
+            p: 2,
             borderTop: '1px solid',
             borderColor: 'divider',
             bgcolor: 'background.paper'
@@ -191,10 +207,10 @@ const Chatbot = () => {
                   }
                 }}
               />
-              <IconButton 
+              <IconButton
                 type="submit"
                 disabled={loading}
-                sx={{ 
+                sx={{
                   bgcolor: 'primary.main',
                   color: 'white',
                   '&:hover': { bgcolor: 'primary.dark' },
@@ -206,7 +222,7 @@ const Chatbot = () => {
               <IconButton
                 component="label"
                 disabled={loading}
-                sx={{ 
+                sx={{
                   bgcolor: 'secondary.main',
                   color: 'white',
                   '&:hover': { bgcolor: 'secondary.dark' },
@@ -214,9 +230,9 @@ const Chatbot = () => {
                 }}
               >
                 <CloudUpload />
-                <input 
-                  type="file" 
-                  hidden 
+                <input
+                  type="file"
+                  hidden
                   accept=".pdf"
                   onChange={handleFileChange}
                 />
@@ -224,7 +240,7 @@ const Chatbot = () => {
             </form>
 
             {file && (
-              <Box sx={{ 
+              <Box sx={{
                 mt: 1.5,
                 display: 'flex',
                 alignItems: 'center',
@@ -233,7 +249,7 @@ const Chatbot = () => {
                 <Typography variant="body2" color="text.secondary">
                   {file.name}
                 </Typography>
-                <Button 
+                <Button
                   variant="contained"
                   size="small"
                   onClick={handleFileUpload}
@@ -253,7 +269,7 @@ const Chatbot = () => {
                 <CircularProgress size={24} />
               </Box>
             )}
-            
+
             {error && (
               <Typography color="error" variant="body2" sx={{ mt: 1 }}>
                 {error}
@@ -261,6 +277,16 @@ const Chatbot = () => {
             )}
           </Box>
         </Paper>
+        <Snackbar
+          open={Boolean(error || success)}
+          autoHideDuration={4000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={error ? 'error' : 'success'} variant="filled">
+            {error ? error : (success)}
+          </Alert>
+        </Snackbar>
       </Box>
     </ThemeProvider>
   );

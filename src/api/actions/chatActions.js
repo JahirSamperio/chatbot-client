@@ -6,8 +6,7 @@ export const sendMessageToChatbot = async (message) => {
         const response = await chatApi.post('/chat/chat', { message });
         return response.data;
     } catch (error) {
-        console.error('Error al enviar el mensaje:', error);
-        throw new Error('No se pudo enviar el mensaje');
+        throw error;
     }
 };
 
